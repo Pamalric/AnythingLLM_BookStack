@@ -16,12 +16,15 @@ const EnvSchema = z.object({
   COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
   ALLOWED_BOOKSTACK_HOSTS: z.string().default("documentation.xperteam.net"),
   ALLOWED_ANYTHINGLLM_HOSTS: z.string().default("jarvis.xperteam.net,anythingllm"),
+  SECRETS_MASTER_KEY: z.string().min(16).optional(),
+  SECRETS_FILE: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof EnvSchema> & {
   isProd: boolean;
   allowedBookstackHosts: string[];
   allowedAnythingllmHosts: string[];
+  secretsFilePath: string;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -41,6 +44,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     isProd: data.NODE_ENV === "production",
     allowedBookstackHosts: splitHosts(data.ALLOWED_BOOKSTACK_HOSTS),
     allowedAnythingllmHosts: splitHosts(data.ALLOWED_ANYTHINGLLM_HOSTS),
+    secretsFilePath: data.SECRETS_FILE ?? "data/secrets.enc",
   };
 }
 

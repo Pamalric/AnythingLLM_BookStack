@@ -20,19 +20,17 @@ Livré : `compatibility.md`, `architecture.md`, `plan.md`, `decisions.md`. Valid
 
 **Exit lot 1 :** application démarrable en local, sans mutation Jarvis. Voir `docs/lot1.md`.
 
-## Lot 2 — Configuration (suivant)
+## Lot 2 — Configuration ✅ (2026-11-13)
 
-## Lot 2 — Configuration
+| Tâche | Critère de sortie | Statut |
+|---|---|---|
+| Écran Configuration FR | URLs, workspace, fréquence, activation, retraits | OK |
+| Zod + SSRF allowlist | Rejets URL malicieuses | OK |
+| Secrets serveur | Jamais restitués ; env ou AES-GCM | OK |
+| Tests de connexion | Messages exploitables | OK |
+| Audit | Journalisé | OK |
 
-| Tâche | Critère de sortie |
-|---|---|
-| Écran Configuration FR | URLs, workspace, fréquence, activation, politique retraits |
-| Zod + SSRF allowlist | Rejets URL malicieuses |
-| Secrets serveur | Jamais restitués à l’UI ; rotation possible |
-| Tests de connexion | Messages d’erreur exploitables |
-| Audit changements sensibles | Journalisé |
-
-**Exit :** config sauvegardable ; tests connexion BookStack/AnyLLM en lecture.
+**Exit lot 2 :** config sauvegardable ; tests lecture seule. Voir `docs/lot2.md`.
 
 ## Lot 3 — Collecte BookStack
 

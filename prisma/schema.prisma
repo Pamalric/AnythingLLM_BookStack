@@ -18,6 +18,12 @@ model Settings {
   scheduleIntervalMin   Int      @default(60)
   removalPolicy         String   @default("manual_approval")
   timezone              String   @default("Europe/Paris")
+  lastBookstackTestAt      DateTime?
+  lastBookstackTestOk      Boolean?
+  lastBookstackTestMessage String?
+  lastAnythingllmTestAt      DateTime?
+  lastAnythingllmTestOk      Boolean?
+  lastAnythingllmTestMessage String?
   updatedAt             DateTime @updatedAt
   createdAt             DateTime @default(now())
 }

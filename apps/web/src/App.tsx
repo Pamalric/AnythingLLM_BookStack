@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { ConfigurationPage } from "./pages/ConfigurationPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ShellLayout } from "./pages/ShellLayout";
 
@@ -10,7 +11,7 @@ export function App() {
         <Route index element={<Placeholder title="Tableau de bord" />} />
         <Route path="documents" element={<Placeholder title="Documents" />} />
         <Route path="historique" element={<Placeholder title="Historique" />} />
-        <Route path="configuration" element={<Placeholder title="Configuration" />} />
+        <Route path="configuration" element={<ConfigurationPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

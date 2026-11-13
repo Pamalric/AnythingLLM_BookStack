@@ -9,6 +9,11 @@ import { createRequireAuth } from "./middleware/require-auth.js";
 import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { createHealthRouter } from "./routes/health.js";
+import {
+  appErrorHandler,
+  createConnectionsRouter,
+  createSettingsRouter,
+} from "./routes/settings.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,6 +32,8 @@ export function createApp(config: AppConfig, passwordHash: string): Express {
 
   app.use(createHealthRouter());
   app.use("/api/v1/auth", createAuthRouter(config, passwordHash));
+  app.use("/api/v1/settings", createSettingsRouter(config));
+  app.use("/api/v1/connections", createConnectionsRouter(config));
 
   const requireAuth = createRequireAuth(config);
   app.get("/api/v1/dashboard", requireAuth, (req, res) => {
@@ -48,21 +55,7 @@ export function createApp(config: AppConfig, passwordHash: string): Express {
     });
   }
 
-  app.use(
-    (
-      err: unknown,
-      req: express.Request,
-      res: express.Response,
-      _next: express.NextFunction,
-    ) => {
-      const message = err instanceof Error ? err.message : "Erreur interne";
-      res.status(500).json({
-        code: "INTERNAL_ERROR",
-        message: config.isProd ? "Erreur interne" : message,
-        requestId: req.requestId,
-      });
-    },
-  );
+  app.use(appErrorHandler);
 
   return app;
 }

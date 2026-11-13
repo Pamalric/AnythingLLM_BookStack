@@ -1,10 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-
-function readCsrfCookie(): string | null {
-  const match = document.cookie.match(/(?:^|; )bss_csrf=([^;]*)/);
-  return match ? decodeURIComponent(match[1]!) : null;
-}
+import { readCsrfCookie } from "../lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
