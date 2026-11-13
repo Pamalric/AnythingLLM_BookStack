@@ -72,6 +72,7 @@ export function LoginPage() {
           </button>
         </form>
       </div>
+      <p className="mt-4 text-center text-xs text-slate-400">v.26.11.13</p>
     </main>
   );
 }
