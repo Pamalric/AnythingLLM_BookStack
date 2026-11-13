@@ -6,11 +6,20 @@ export default {
       colors: {
         ink: "#0f172a",
         mist: "#e2e8f0",
-        accent: "#0f766e",
+        accent: "#1d6fb8",
+        "accent-dark": "#155a96",
       },
       fontFamily: {
-        sans: ['"Source Sans 3"', "Segoe UI", "sans-serif"],
-        display: ['"Fraunces"', "Georgia", "serif"],
+        sans: [
+          "Segoe UI",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+        ],
       },
     },
   },

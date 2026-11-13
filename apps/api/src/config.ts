@@ -5,7 +5,7 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8080),
   HOST: z.string().default("0.0.0.0"),
   DATABASE_URL: z.string().min(1),
-  ADMIN_USERNAME: z.string().min(1).default("admin"),
+  ADMIN_USERNAME: z.string().min(1).default("administrator"),
   ADMIN_PASSWORD: z.string().optional(),
   ADMIN_PASSWORD_HASH: z.string().optional(),
   SESSION_SECRET: z.string().min(32),

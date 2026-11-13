@@ -9,6 +9,7 @@ import { createRequireAuth } from "./middleware/require-auth.js";
 import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { createHealthRouter } from "./routes/health.js";
+import { createConsoleRouter } from "./routes/console.js";
 import {
   appErrorHandler,
   createConnectionsRouter,
@@ -34,14 +35,7 @@ export function createApp(config: AppConfig, passwordHash: string): Express {
   app.use("/api/v1/auth", createAuthRouter(config, passwordHash));
   app.use("/api/v1/settings", createSettingsRouter(config));
   app.use("/api/v1/connections", createConnectionsRouter(config));
-
-  const requireAuth = createRequireAuth(config);
-  app.get("/api/v1/dashboard", requireAuth, (req, res) => {
-    res.json({
-      message: "Tableau de bord — à compléter au lot 6",
-      user: req.sessionUser,
-    });
-  });
+  app.use("/api/v1", createConsoleRouter(config));
 
   const webDist = path.resolve(__dirname, "../../web/dist");
   if (existsSync(webDist)) {

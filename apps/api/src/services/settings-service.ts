@@ -306,7 +306,11 @@ export function createSettingsService(config: AppConfig) {
       const settings = await ensureSettings();
       const { secrets, sources } = await vault.resolve();
       if (sources.anythingllmApiKey === "none" || !secrets.anythingllmApiKey) {
-        throw new AppError("CREDENTIALS_MISSING", "Clé API AnythingLLM non configurée", 400);
+        throw new AppError(
+          "CREDENTIALS_MISSING",
+          "Clé API AnythingLLM non configurée. Enregistrez-la dans Configuration (champ Clé API), pas dans le slug workspace.",
+          400,
+        );
       }
       const urlCheck = validateAllowedUrl(settings.anythingllmBaseUrl, config.allowedAnythingllmHosts, {
         allowHttpHosts: config.allowedAnythingllmHosts.filter((h) => h === "anythingllm"),

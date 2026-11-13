@@ -1,19 +1,37 @@
-import { createHash } from "node:crypto";
-
 /**
- * Moteur de synchronisation — orchestration complète : lots 3–5.
- * Lot 1 : utilitaires déterministes testables.
+ * Moteur de synchronisation — inventaire, hash, plan, verrous (lots 3–5).
  */
 
-export function normalizeMarkdownForHash(input: string): string {
-  return input.replace(/\r\n/g, "\n").trimEnd() + "\n";
-}
+export {
+  normalizeMarkdownForHash,
+  sha256Hex,
+  contentHash,
+} from "./hash.js";
 
-export function sha256Hex(content: string): string {
-  return createHash("sha256").update(content, "utf8").digest("hex");
-}
+export {
+  buildMetadataCanonical,
+  buildSourcePageUrl,
+  buildUploadFilename,
+  CONNECTOR_FOLDER,
+  type PageMetadataInput,
+} from "./metadata.js";
 
-export function contentHash(markdown: string, metadataCanonical: string): string {
-  const normalized = normalizeMarkdownForHash(markdown);
-  return sha256Hex(`${metadataCanonical}\n---\n${normalized}`);
-}
+export {
+  diffInventory,
+  nextStateAfterInventory,
+  emptyCounters,
+  type RemotePageRef,
+  type LocalPageRef,
+  type InventoryAction,
+  type InventoryDecision,
+  type InventoryDiffResult,
+  type SyncCounters,
+} from "./inventory.js";
+
+export {
+  canAcquireLock,
+  nextLease,
+  SYNC_LOCK_KEY,
+  DEFAULT_LEASE_MS,
+  type LockLease,
+} from "./locks.js";

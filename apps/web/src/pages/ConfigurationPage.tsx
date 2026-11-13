@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+﻿import { useEffect, useState, type FormEvent } from "react";
+import { useToast } from "../components/Toaster";
 import { apiFetch } from "../lib/api";
 
 type Settings = {
@@ -29,13 +30,17 @@ const INTERVALS = [
   { value: 1440, label: "24 heures" },
 ];
 
+function looksLikeApiKey(value: string): boolean {
+  return /^[A-Z0-9]{4,}-[A-Z0-9-]{8,}$/i.test(value.trim());
+}
+
 export function ConfigurationPage() {
+  const toast = useToast();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [workspaces, setWorkspaces] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmWorkspace, setConfirmWorkspace] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [bookstackBaseUrl, setBookstackBaseUrl] = useState("");
   const [anythingllmBaseUrl, setAnythingllmBaseUrl] = useState("");
@@ -48,85 +53,138 @@ export function ConfigurationPage() {
   const [apiKey, setApiKey] = useState("");
 
   async function load() {
-    setError(null);
     const res = await apiFetch<Settings>("/api/v1/settings");
     if (!res.ok) {
-      setError(res.message);
+      setLoadError(res.message);
+      toast.error(res.message);
       return;
     }
+    setLoadError(null);
     setSettings(res.data);
     setBookstackBaseUrl(res.data.bookstackBaseUrl);
     setAnythingllmBaseUrl(res.data.anythingllmBaseUrl);
-    setWorkspaceSlug(res.data.workspaceSlug ?? "");
+    const slug = res.data.workspaceSlug ?? "";
+    if (looksLikeApiKey(slug)) {
+      setWorkspaceSlug("");
+      setApiKey(slug);
+      toast.info("Valeur type clé API détectée dans Workspace : déplacée vers AnythingLLM.");
+    } else {
+      setWorkspaceSlug(slug);
+    }
     setScheduleEnabled(res.data.scheduleEnabled);
     setScheduleIntervalMin(res.data.scheduleIntervalMin);
   }
 
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function onSave(e: FormEvent) {
-    e.preventDefault();
+  async function saveAnythingllm(e?: FormEvent) {
+    e?.preventDefault();
+    if (looksLikeApiKey(workspaceSlug)) {
+      toast.error("Le workspace est un slug (ex. support-produit), pas la clé API.");
+      return;
+    }
     setBusy(true);
-    setError(null);
-    setInfo(null);
+
+    if (apiKey.trim()) {
+      const secretRes = await apiFetch<{ updated: boolean }>("/api/v1/settings/secrets", {
+        method: "PUT",
+        body: JSON.stringify({ anythingllmApiKey: apiKey.trim() }),
+      });
+      if (!secretRes.ok) {
+        setBusy(false);
+        toast.error(secretRes.message);
+        return;
+      }
+    }
+
     const res = await apiFetch<Settings>("/api/v1/settings", {
       method: "PATCH",
       body: JSON.stringify({
-        bookstackBaseUrl,
         anythingllmBaseUrl,
         workspaceSlug: workspaceSlug || null,
-        scheduleEnabled,
-        scheduleIntervalMin,
-        removalPolicy: "manual_approval",
-        timezone: "Europe/Paris",
         confirmWorkspaceChange: confirmWorkspace || undefined,
       }),
     });
     setBusy(false);
     if (!res.ok) {
-      setError(res.message);
+      toast.error(res.message);
       return;
     }
     setSettings(res.data);
-    setInfo("Configuration enregistrée");
     setConfirmWorkspace(false);
+    if (apiKey.trim()) setApiKey("");
+    toast.success("AnythingLLM enregistré");
+    await load();
   }
 
-  async function onSaveSecrets(e: FormEvent) {
-    e.preventDefault();
+  async function saveBookstack(e?: FormEvent) {
+    e?.preventDefault();
     setBusy(true);
-    setError(null);
-    setInfo(null);
-    const body: Record<string, string> = {};
-    if (tokenId && tokenSecret) {
-      body.bookstackTokenId = tokenId;
-      body.bookstackTokenSecret = tokenSecret;
+
+    if (tokenId.trim() || tokenSecret.trim()) {
+      if (!tokenId.trim() || !tokenSecret.trim()) {
+        setBusy(false);
+        toast.error("Renseignez Token ID et Token Secret ensemble.");
+        return;
+      }
+      const secretRes = await apiFetch<{ updated: boolean }>("/api/v1/settings/secrets", {
+        method: "PUT",
+        body: JSON.stringify({
+          bookstackTokenId: tokenId.trim(),
+          bookstackTokenSecret: tokenSecret.trim(),
+        }),
+      });
+      if (!secretRes.ok) {
+        setBusy(false);
+        toast.error(secretRes.message);
+        return;
+      }
     }
-    if (apiKey) {
-      body.anythingllmApiKey = apiKey;
-    }
-    const res = await apiFetch<{ updated: boolean }>("/api/v1/settings/secrets", {
-      method: "PUT",
-      body: JSON.stringify(body),
+
+    const res = await apiFetch<Settings>("/api/v1/settings", {
+      method: "PATCH",
+      body: JSON.stringify({ bookstackBaseUrl }),
     });
     setBusy(false);
     if (!res.ok) {
-      setError(res.message);
+      toast.error(res.message);
       return;
     }
-    setTokenId("");
-    setTokenSecret("");
-    setApiKey("");
-    setInfo("Secrets enregistrés (non restitués à l'interface)");
+    setSettings(res.data);
+    if (tokenId || tokenSecret) {
+      setTokenId("");
+      setTokenSecret("");
+    }
+    toast.success("BookStack enregistré");
     await load();
+  }
+
+  async function saveSchedule(e?: FormEvent) {
+    e?.preventDefault();
+    setBusy(true);
+    const res = await apiFetch<Settings>("/api/v1/settings", {
+      method: "PATCH",
+      body: JSON.stringify({
+        scheduleEnabled,
+        scheduleIntervalMin,
+        removalPolicy: "manual_approval",
+        timezone: "Europe/Paris",
+      }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      toast.error(res.message);
+      return;
+    }
+    setSettings(res.data);
+    toast.success("Planification enregistrée");
   }
 
   async function testConnection(target: "bookstack" | "anythingllm" | "both") {
     setBusy(true);
-    setError(null);
-    setInfo(null);
     const res = await apiFetch<{
       ok: boolean;
       results: Record<string, { ok: boolean; message: string }>;
@@ -136,73 +194,75 @@ export function ConfigurationPage() {
     });
     setBusy(false);
     if (!res.ok) {
-      setError(res.message);
+      toast.error(res.message);
       return;
     }
     const lines = Object.entries(res.data.results).map(
       ([k, v]) => `${k}: ${v.ok ? "OK" : "Échec"} — ${v.message}`,
     );
-    if (res.data.ok) {
-      setInfo(lines.join(" · "));
-    } else {
-      setError(lines.join(" · "));
-    }
+    if (res.data.ok) toast.success(lines.join(" · "));
+    else toast.error(lines.join(" · "));
     await load();
   }
 
   async function refreshWorkspaces() {
     setBusy(true);
-    setError(null);
+    if (apiKey.trim()) {
+      const secretRes = await apiFetch<{ updated: boolean }>("/api/v1/settings/secrets", {
+        method: "PUT",
+        body: JSON.stringify({ anythingllmApiKey: apiKey.trim() }),
+      });
+      if (!secretRes.ok) {
+        setBusy(false);
+        toast.error(secretRes.message);
+        return;
+      }
+      setApiKey("");
+      await load();
+    }
     const res = await apiFetch<{ workspaces: Array<{ slug: string }> }>(
       "/api/v1/settings/workspaces",
     );
     setBusy(false);
     if (!res.ok) {
-      setError(res.message);
+      toast.error(
+        res.code === "CREDENTIALS_MISSING"
+          ? "Clé API AnythingLLM absente. Renseignez-la puis réessayez."
+          : res.message,
+      );
       return;
     }
-    setWorkspaces(res.data.workspaces.map((w) => w.slug));
+    const slugs = res.data.workspaces.map((w) => w.slug);
+    setWorkspaces(slugs);
+    if (slugs.length) toast.success(`${slugs.length} workspace(s) chargés`);
+    else toast.info("Aucun workspace visible avec cette clé.");
   }
 
   if (!settings) {
-    return <p className="text-slate-600">{error ?? "Chargement de la configuration…"}</p>;
+    return <p className="text-slate-600">{loadError ?? "Chargement de la configuration…"}</p>;
   }
 
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-slate-200 bg-white/80 p-6 shadow-sm">
-        <h1 className="font-display text-2xl text-ink">Configuration</h1>
-        <p className="mt-1 text-slate-600">
-          Source BookStack, cible AnythingLLM, cadence et politique de retraits. Les secrets ne sont
-          jamais réaffichés.
-        </p>
+        <h1 className="text-2xl font-semibold text-ink">Configuration</h1>
       </section>
 
-      {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {info ? (
-        <p className="rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-900" role="status">
-          {info}
-        </p>
-      ) : null}
-
+      {/* ——— Zone 1 : AnythingLLM ——— */}
       <form
-        onSubmit={onSave}
+        onSubmit={(e) => void saveAnythingllm(e)}
         className="space-y-4 rounded-lg border border-slate-200 bg-white/80 p-6 shadow-sm"
       >
-        <h2 className="text-lg font-semibold text-ink">Connexions</h2>
-        <label className="block text-sm">
-          <span className="mb-1 block text-slate-700">URL BookStack</span>
-          <input
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-            value={bookstackBaseUrl}
-            onChange={(e) => setBookstackBaseUrl(e.target.value)}
-            required
-          />
-        </label>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-ink">1. AnythingLLM</h2>
+          <p className="text-sm text-slate-600">
+            Clé :{" "}
+            {settings.credentials.anythingllmApiKey.configured
+              ? `présente (${settings.credentials.anythingllmApiKey.source})`
+              : "absente"}
+          </p>
+        </div>
+
         <label className="block text-sm">
           <span className="mb-1 block text-slate-700">URL AnythingLLM</span>
           <input
@@ -212,31 +272,67 @@ export function ConfigurationPage() {
             required
           />
         </label>
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="block min-w-[16rem] flex-1 text-sm">
-            <span className="mb-1 block text-slate-700">Workspace cible (slug)</span>
-            <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
-              value={workspaceSlug}
-              onChange={(e) => setWorkspaceSlug(e.target.value)}
-              placeholder="bookstack-sync-recette"
-              list="workspace-slugs"
-            />
-            <datalist id="workspace-slugs">
+
+        <label className="block text-sm">
+          <span className="mb-1 block text-slate-700">Clé API</span>
+          <input
+            type="text"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={
+              settings.credentials.anythingllmApiKey.configured
+                ? "Laisser vide pour conserver la clé actuelle, ou coller une nouvelle clé"
+                : "Coller la clé API AnythingLLM"
+            }
+          />
+        </label>
+
+        <div>
+          <div className="mb-2 flex flex-wrap items-end gap-2">
+            <label className="block min-w-[16rem] flex-1 text-sm">
+              <span className="mb-1 block text-slate-700">Workspace cible (slug)</span>
+              <input
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={workspaceSlug}
+                onChange={(e) => setWorkspaceSlug(e.target.value)}
+                placeholder="ex. support-produit"
+                list="workspace-slugs"
+              />
+              <datalist id="workspace-slugs">
+                {workspaces.map((slug) => (
+                  <option key={slug} value={slug} />
+                ))}
+              </datalist>
+            </label>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void refreshWorkspaces()}
+              className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200"
+            >
+              Charger les workspaces
+            </button>
+          </div>
+          {workspaces.length > 0 ? (
+            <ul className="flex flex-wrap gap-2">
               {workspaces.map((slug) => (
-                <option key={slug} value={slug} />
+                <li key={slug}>
+                  <button
+                    type="button"
+                    className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-800 ring-1 ring-slate-200 hover:bg-blue-50"
+                    onClick={() => setWorkspaceSlug(slug)}
+                  >
+                    {slug}
+                  </button>
+                </li>
               ))}
-            </datalist>
-          </label>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void refreshWorkspaces()}
-            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200"
-          >
-            Charger les workspaces
-          </button>
+            </ul>
+          ) : null}
         </div>
+
         {settings.syncAlreadyStarted ? (
           <label className="flex items-start gap-2 text-sm text-amber-900">
             <input
@@ -245,148 +341,174 @@ export function ConfigurationPage() {
               onChange={(e) => setConfirmWorkspace(e.target.checked)}
               className="mt-1"
             />
-            <span>
-              Confirmer un changement de workspace (une synchronisation a déjà écrit des documents).
-            </span>
+            <span>Confirmer le changement de workspace (sync déjà effectuée).</span>
           </label>
         ) : null}
 
-        <h2 className="pt-2 text-lg font-semibold text-ink">Planification</h2>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={scheduleEnabled}
-            onChange={(e) => setScheduleEnabled(e.target.checked)}
-          />
-          Activer le planificateur
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block text-slate-700">Fréquence</span>
-          <select
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-            value={scheduleIntervalMin}
-            onChange={(e) => setScheduleIntervalMin(Number(e.target.value))}
-          >
-            {INTERVALS.map((i) => (
-              <option key={i.value} value={i.value}>
-                {i.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="text-sm text-slate-600">
-          Fuseau : {settings.timezone} · Retraits : approbation manuelle (V1)
-        </p>
-
-        <div className="flex flex-wrap gap-2 pt-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="submit"
             disabled={busy}
             className="rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-60"
           >
-            Enregistrer
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void testConnection("both")}
-            className="rounded-md bg-white px-4 py-2 font-semibold text-slate-700 ring-1 ring-slate-200"
-          >
-            Tester les connexions
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void testConnection("bookstack")}
-            className="rounded-md bg-white px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200"
-          >
-            Test BookStack
+            Enregistrer AnythingLLM
           </button>
           <button
             type="button"
             disabled={busy}
             onClick={() => void testConnection("anythingllm")}
-            className="rounded-md bg-white px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200"
+            className="rounded-md bg-white px-4 py-2 font-semibold text-slate-700 ring-1 ring-slate-200"
           >
-            Test AnythingLLM
+            Tester AnythingLLM
           </button>
         </div>
       </form>
 
+      {/* ——— Zone 2 : BookStack ——— */}
       <form
-        onSubmit={onSaveSecrets}
+        onSubmit={(e) => void saveBookstack(e)}
         className="space-y-4 rounded-lg border border-slate-200 bg-white/80 p-6 shadow-sm"
       >
-        <h2 className="text-lg font-semibold text-ink">Secrets API</h2>
-        <p className="text-sm text-slate-600">
-          BookStack token :{" "}
-          {settings.credentials.bookstackToken.configured
-            ? `configuré (${settings.credentials.bookstackToken.source})`
-            : "absent"}{" "}
-          · AnythingLLM :{" "}
-          {settings.credentials.anythingllmApiKey.configured
-            ? `configurée (${settings.credentials.anythingllmApiKey.source})`
-            : "absente"}
-        </p>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-ink">2. BookStack</h2>
+          <p className="text-sm text-slate-600">
+            Token :{" "}
+            {settings.credentials.bookstackToken.configured
+              ? `présent (${settings.credentials.bookstackToken.source})`
+              : "absent"}
+          </p>
+        </div>
+
+        <label className="block text-sm">
+          <span className="mb-1 block text-slate-700">URL BookStack</span>
+          <input
+            className="w-full rounded-md border border-slate-300 px-3 py-2"
+            value={bookstackBaseUrl}
+            onChange={(e) => setBookstackBaseUrl(e.target.value)}
+            required
+          />
+        </label>
+
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block text-sm">
-            <span className="mb-1 block text-slate-700">BookStack Token ID</span>
+            <span className="mb-1 block text-slate-700">Token ID</span>
             <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              type="text"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm"
               value={tokenId}
               onChange={(e) => setTokenId(e.target.value)}
               autoComplete="off"
-              placeholder="Nouveau ID (jamais réaffiché)"
+              spellCheck={false}
+              placeholder={
+                settings.credentials.bookstackToken.configured
+                  ? "Laisser vide pour conserver, ou coller un nouvel ID"
+                  : "Token ID"
+              }
             />
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block text-slate-700">BookStack Token Secret</span>
+            <span className="mb-1 block text-slate-700">Token Secret</span>
             <input
-              type="password"
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              type="text"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm"
               value={tokenSecret}
               onChange={(e) => setTokenSecret(e.target.value)}
-              autoComplete="new-password"
-              placeholder="Nouveau secret"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={
+                settings.credentials.bookstackToken.configured
+                  ? "Laisser vide pour conserver, ou coller un nouveau secret"
+                  : "Token Secret"
+              }
             />
           </label>
         </div>
-        <label className="block text-sm">
-          <span className="mb-1 block text-slate-700">Clé API AnythingLLM</span>
-          <input
-            type="password"
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            autoComplete="new-password"
-            placeholder="Nouvelle clé (jamais réaffichée)"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={busy || (!tokenId && !apiKey)}
-          className="rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-60"
-        >
-          Enregistrer les secrets
-        </button>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-60"
+          >
+            Enregistrer BookStack
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void testConnection("bookstack")}
+            className="rounded-md bg-white px-4 py-2 font-semibold text-slate-700 ring-1 ring-slate-200"
+          >
+            Tester BookStack
+          </button>
+        </div>
       </form>
 
-      <section className="rounded-lg border border-slate-200 bg-white/80 p-6 text-sm shadow-sm">
-        <h2 className="text-lg font-semibold text-ink">Derniers tests</h2>
-        <ul className="mt-3 space-y-2 text-slate-700">
-          <li>
-            BookStack :{" "}
-            {settings.lastTests.bookstack.at
-              ? `${settings.lastTests.bookstack.ok ? "OK" : "Échec"} — ${settings.lastTests.bookstack.message} (${settings.lastTests.bookstack.at})`
-              : "aucun"}
-          </li>
-          <li>
-            AnythingLLM :{" "}
-            {settings.lastTests.anythingllm.at
-              ? `${settings.lastTests.anythingllm.ok ? "OK" : "Échec"} — ${settings.lastTests.anythingllm.message} (${settings.lastTests.anythingllm.at})`
-              : "aucun"}
-          </li>
-        </ul>
+      {/* ——— Zone 3 : Planification + derniers tests ——— */}
+      <section className="space-y-4 rounded-lg border border-slate-200 bg-white/80 p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-ink">3. Planification et derniers tests</h2>
+
+        <form onSubmit={(e) => void saveSchedule(e)} className="space-y-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={scheduleEnabled}
+              onChange={(e) => setScheduleEnabled(e.target.checked)}
+            />
+            Activer le planificateur
+          </label>
+          <label className="block max-w-sm text-sm">
+            <span className="mb-1 block text-slate-700">Fréquence</span>
+            <select
+              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              value={scheduleIntervalMin}
+              onChange={(e) => setScheduleIntervalMin(Number(e.target.value))}
+            >
+              {INTERVALS.map((i) => (
+                <option key={i.value} value={i.value}>
+                  {i.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-sm text-slate-600">
+            Fuseau : {settings.timezone} · Retraits : approbation manuelle (V1)
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-md bg-accent px-4 py-2 font-semibold text-white disabled:opacity-60"
+            >
+              Enregistrer la planification
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void testConnection("both")}
+              className="rounded-md bg-white px-4 py-2 font-semibold text-slate-700 ring-1 ring-slate-200"
+            >
+              Tester les deux connexions
+            </button>
+          </div>
+        </form>
+
+        <div className="border-t border-slate-200 pt-4 text-sm text-slate-700">
+          <p className="font-semibold text-ink">Derniers tests</p>
+          <ul className="mt-2 space-y-2">
+            <li>
+              BookStack :{" "}
+              {settings.lastTests.bookstack.at
+                ? `${settings.lastTests.bookstack.ok ? "OK" : "Échec"} — ${settings.lastTests.bookstack.message}`
+                : "aucun"}
+            </li>
+            <li>
+              AnythingLLM :{" "}
+              {settings.lastTests.anythingllm.at
+                ? `${settings.lastTests.anythingllm.ok ? "OK" : "Échec"} — ${settings.lastTests.anythingllm.message}`
+                : "aucun"}
+            </li>
+          </ul>
+        </div>
       </section>
     </div>
   );

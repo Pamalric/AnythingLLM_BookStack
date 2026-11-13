@@ -1,18 +1,18 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../components/Toaster";
 import { readCsrfCookie } from "../lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("admin");
+  const toast = useToast();
+  const [username, setUsername] = useState("administrator");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     try {
       const res = await fetch("/api/v1/auth/login", {
         method: "POST",
@@ -22,14 +22,14 @@ export function LoginPage() {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { message?: string } | null;
-        setError(body?.message ?? "Connexion impossible");
+        toast.error(body?.message ?? "Connexion impossible");
         return;
       }
-      // CSRF cookie posé par le serveur pour les mutations suivantes
       void readCsrfCookie();
+      toast.success("Connexion réussie");
       navigate("/");
     } catch {
-      setError("Réseau indisponible");
+      toast.error("Réseau indisponible");
     } finally {
       setLoading(false);
     }
@@ -39,7 +39,7 @@ export function LoginPage() {
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
       <div className="rounded-xl border border-slate-200 bg-white/90 p-8 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-wide text-accent">XPERTEAM</p>
-        <h1 className="mt-2 font-display text-3xl text-ink">BookStack Sync</h1>
+        <h1 className="mt-2 text-3xl font-semibold text-ink">BookStack Sync</h1>
         <p className="mt-2 text-slate-600">Connexion administrateur</p>
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <label className="block text-sm">
@@ -63,11 +63,6 @@ export function LoginPage() {
               required
             />
           </label>
-          {error ? (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-              {error}
-            </p>
-          ) : null}
           <button
             type="submit"
             disabled={loading}

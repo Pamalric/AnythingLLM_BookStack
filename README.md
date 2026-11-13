@@ -19,7 +19,8 @@ Diagnostic lot 0 : `docs/compatibility.md`, `docs/architecture.md`, `docs/plan.m
 
 ```bash
 cp .env.example .env
-# Éditer .env : SESSION_SECRET (>=32 car.), ADMIN_PASSWORD
+# Éditer .env : SESSION_SECRET (>=32 car.)
+# Défaut login : administrator / administrator
 mkdir -p data
 export DATABASE_URL="file:./data/bookstack-sync.db"
 
@@ -57,4 +58,14 @@ curl http://127.0.0.1:8080/health
 
 - Ne pas committer `.env`, tokens BookStack/AnythingLLM, ni hash admin de production.
 - Les secrets ne sont jamais renvoyés par l’API.
-- Aucune écriture dans la DB ou les volumes AnythingLLM.
+- Écritures AnythingLLM uniquement via API publique, folder `bookstack-sync`, workspace configuré (recette avant prod).
+- Inventaire BookStack incomplet ⇒ aucun retrait proposé.
+
+## Lots livrés
+
+| Lot | Contenu | Doc |
+|---|---|---|
+| 0–2 | Diagnostic, socle, configuration | `docs/lot1.md`, `docs/lot2.md` |
+| 3 | Inventaire BookStack + hash | `docs/lot3.md` |
+| 4 | Upload / embeddings / sync document | `docs/lot4.md` |
+| 5 | Scheduler, verrous, dry-run, retraits | `docs/lot5.md` |

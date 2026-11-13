@@ -32,41 +32,41 @@ Livré : `compatibility.md`, `architecture.md`, `plan.md`, `decisions.md`. Valid
 
 **Exit lot 2 :** config sauvegardable ; tests lecture seule. Voir `docs/lot2.md`.
 
-## Lot 3 — Collecte BookStack
+## Lot 3 — Collecte BookStack ✅ (2026-11-13)
 
-| Tâche | Critère de sortie |
-|---|---|
-| Client Token + pagination complète | Inventaire = `total` |
-| Books/chapters/pages + export MD | Une page = un document logique |
-| Hash SHA-256 déterministe | Tests unitaires |
-| Panne source | Aucun retrait déclenché |
+| Tâche | Critère de sortie | Statut |
+|---|---|---|
+| Client Token + pagination complète | Inventaire = `total` | OK |
+| Books/chapters/pages + export MD | Une page = un document logique | OK |
+| Hash SHA-256 déterministe | Tests unitaires | OK |
+| Panne source | Aucun retrait déclenché | OK |
 
-**Exit :** inventaire + export vérifiés (compte technique) ; tests pagination/erreurs.
+**Exit lot 3 :** voir `docs/lot3.md`. Validation tokens BookStack live reste à faire côté config.
 
-## Lot 4 — Indexation AnythingLLM
+## Lot 4 — Indexation AnythingLLM ✅ code (2026-11-13)
 
-| Tâche | Critère de sortie |
-|---|---|
-| Adapter sur Swagger Jarvis uniquement | Pas d’endpoint inventé |
-| Workspace **recette** uniquement | Aucune écriture workspaces prod |
-| Upload + association + confirmation | `location` persistée `CONNECTOR_OWNED` |
-| Remplacement sûr | Nouvelle version avant retrait ancienne |
-| Sync ciblée document | Trace `DOCUMENT` |
+| Tâche | Critère de sortie | Statut |
+|---|---|---|
+| Adapter Swagger Jarvis uniquement | Pas d’endpoint inventé | OK |
+| Workspace **recette** uniquement | Aucune écriture workspaces prod | À valider opérationnellement |
+| Upload + association + confirmation | `location` persistée `CONNECTOR_OWNED` | OK (code) |
+| Remplacement sûr | Nouvelle version avant retrait ancienne | OK |
+| Sync ciblée document | Trace `DOCUMENT` | OK |
 
-**Exit :** documents de test indexés en recette ; idempotence sur relance.
+**Exit lot 4 :** code prêt ; indexation réelle = workspace recette + accord. Voir `docs/lot4.md`.
 
-## Lot 5 — Moteur & automation
+## Lot 5 — Moteur & automation ✅ (2026-11-13)
 
-| Tâche | Critère de sortie |
-|---|---|
-| Diff incrémental hash/dates | 0 réindex si inchangé |
-| Scheduler + fuseau Europe/Paris | Fréquences CDC |
-| JobLock bail/heartbeat/reprise | Restart mid-job OK |
-| Retry/backoff borné | 429/5xx gérés |
-| `PENDING_REMOVAL` / `ACCESS_REVIEW` | Aucun retrait auto V1 |
-| Dry-run | Simulation sans mutation cible |
+| Tâche | Critère de sortie | Statut |
+|---|---|---|
+| Diff incrémental hash/dates | 0 réindex si inchangé | OK |
+| Scheduler + fuseau Europe/Paris | Fréquences CDC | OK |
+| JobLock bail/heartbeat/reprise | Restart mid-job OK | OK |
+| Retry/backoff borné | 429/5xx gérés | Partiel (erreurs remontées ; backoff fin lot 7) |
+| `PENDING_REMOVAL` / `ACCESS_REVIEW` | Aucun retrait auto V1 | OK |
+| Dry-run | Simulation sans mutation cible | OK |
 
-**Exit :** moteur robuste sur recette ; file d’approbation.
+**Exit lot 5 :** voir `docs/lot5.md`.
 
 ## Lot 6 — Console complète
 

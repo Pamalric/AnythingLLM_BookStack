@@ -46,7 +46,7 @@ export function ShellLayout() {
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-accent">XPERTEAM</p>
-          <h1 className="font-display text-3xl text-ink">BookStack Sync</h1>
+          <h1 className="text-3xl font-semibold text-ink">BookStack Sync</h1>
         </div>
         <p className="text-sm text-slate-600">{username}</p>
       </header>
