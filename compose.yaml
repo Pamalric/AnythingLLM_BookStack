@@ -1,0 +1,45 @@
+# Compose local / VPS — ne monte PAS les volumes Jarvis
+services:
+  bookstack-sync:
+    build: .
+    image: bookstack-sync:0.1.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: file:/app/data/bookstack-sync.db
+      HOST: 0.0.0.0
+      PORT: "8080"
+    volumes:
+      - bookstack_sync_data:/app/data
+    ports:
+      - "8080:8080"
+    # Sur le VPS Jarvis, décommenter après validation :
+    # networks:
+    #   - proxy
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.docker.network=proxy
+    #   - traefik.http.routers.bookstack-sync.rule=Host(`sync.xperteam.net`)
+    #   - traefik.http.routers.bookstack-sync.entrypoints=websecure
+    #   - traefik.http.routers.bookstack-sync.tls.certresolver=letsencrypt
+    #   - traefik.http.services.bookstack-sync.loadbalancer.server.port=8080
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  bookstack_sync_data:
+
+# networks:
+#   proxy:
+#     external: true

@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Configuration non secrète (CDC §9).
+model Settings {
+  id                    Int      @id @default(1)
+  bookstackBaseUrl      String   @default("https://documentation.xperteam.net")
+  anythingllmBaseUrl    String   @default("https://jarvis.xperteam.net")
+  workspaceSlug         String?
+  bookstackInstanceId   String   @default("documentation.xperteam.net")
+  scheduleEnabled       Boolean  @default(false)
+  scheduleIntervalMin   Int      @default(60)
+  removalPolicy         String   @default("manual_approval")
+  timezone              String   @default("Europe/Paris")
+  updatedAt             DateTime @updatedAt
+  createdAt             DateTime @default(now())
+}
+
+/// Référence à un secret externe (jamais le secret lui-même).
+model CredentialRef {
+  id        String   @id @default(cuid())
+  kind      String
+  source    String
+  label     String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([kind])
+}
+
+model SourcePage {
+  id              String    @id @default(cuid())
+  sourceKey       String    @unique
+  bookstackId     Int
+  title           String
+  bookId          Int?
+  bookName        String?
+  chapterId       Int?
+  chapterName     String?
+  sourceUrl       String?
+  sourceUpdatedAt DateTime?
+  contentHash     String?
+  state           String    @default("NEW")
+  lastSeenAt      DateTime?
+  lastSyncAt      DateTime?
+  lastError       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  target          TargetDocument?
+
+  @@index([state])
+  @@index([bookId])
+}
+
+model TargetDocument {
+  id              String     @id @default(cuid())
+  sourcePageId    String     @unique
+  sourcePage      SourcePage @relation(fields: [sourcePageId], references: [id])
+  workspaceSlug   String
+  documentPath    String
+  publishedHash   String?
+  indexedAt       DateTime?
+  ownership       String     @default("CONNECTOR_OWNED")
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model SyncRun {
+  id           String      @id @default(cuid())
+  type         String
+  trigger      String
+  actor        String?
+  status       String      @default("RUNNING")
+  startedAt    DateTime    @default(now())
+  finishedAt   DateTime?
+  progressDone Int         @default(0)
+  progressTotal Int        @default(0)
+  phase        String?
+  countersJson String      @default("{}")
+  errorSummary String?
+  events       SyncEvent[]
+
+  @@index([status])
+  @@index([startedAt])
+}
+
+model SyncEvent {
+  id             String   @id @default(cuid())
+  runId          String
+  run            SyncRun  @relation(fields: [runId], references: [id])
+  sourcePageId   String?
+  action         String
+  status         String
+  message        String?
+  diagnosticCode String?
+  createdAt      DateTime @default(now())
+
+  @@index([runId])
+}
+
+model PendingRemoval {
+  id           String    @id @default(cuid())
+  sourcePageId String
+  reason       String
+  detectedAt   DateTime  @default(now())
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  decision     String?
+  decisionReason String?
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  actor     String
+  action    String
+  entity    String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model JobLock {
+  key         String   @id
+  owner       String
+  leaseUntil  DateTime
+  heartbeatAt DateTime
+}
