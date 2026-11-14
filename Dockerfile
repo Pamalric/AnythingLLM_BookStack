@@ -32,8 +32,8 @@ ENV NODE_ENV=production \
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate \
   && apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
-  && groupadd --system --gid 10001 sync \
-  && useradd --system --uid 10001 --gid sync --home /app --shell /usr/sbin/nologin sync
+  && groupadd --system --gid 10001 bssync \
+  && useradd --system --uid 10001 --gid bssync --home /app --shell /usr/sbin/nologin bssync
 WORKDIR /app
 
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml ./
@@ -43,8 +43,8 @@ COPY --from=build /app/packages ./packages
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/apps/web/dist ./apps/web/dist
 
-RUN mkdir -p /app/data && chown -R sync:sync /app
-USER sync
+RUN mkdir -p /app/data && chown -R bssync:bssync /app
+USER bssync
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
