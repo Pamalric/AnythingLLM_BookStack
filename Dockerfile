@@ -29,6 +29,8 @@ RUN pnpm --filter @bookstack-sync/api exec prisma generate --schema=../../prisma
   && pnpm --filter @bookstack-sync/bookstack-adapter build \
   && pnpm --filter @bookstack-sync/anythingllm-adapter build \
   && pnpm --filter @bookstack-sync/sync-engine build \
+  && test -f packages/shared/dist/index.d.ts \
+  && test -e node_modules/@bookstack-sync/shared \
   && pnpm --filter @bookstack-sync/web build \
   && pnpm --filter @bookstack-sync/api build
 
