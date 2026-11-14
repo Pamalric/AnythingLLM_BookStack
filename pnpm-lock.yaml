@@ -184,16 +184,6 @@ importers:
         version: 5.9.3
 
   packages/sync-engine:
-    dependencies:
-      '@bookstack-sync/anythingllm-adapter':
-        specifier: workspace:*
-        version: link:../anythingllm-adapter
-      '@bookstack-sync/bookstack-adapter':
-        specifier: workspace:*
-        version: link:../bookstack-adapter
-      '@bookstack-sync/shared':
-        specifier: workspace:*
-        version: link:../shared
     devDependencies:
       typescript:
         specifier: ^5.7.2
