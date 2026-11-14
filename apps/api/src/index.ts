@@ -25,6 +25,12 @@ async function main(): Promise<void> {
     logger.warn("workspaceSlug ressemblait à une clé API — valeur effacée");
   }
 
+  const { recoverInterruptedRuns } = await import("./services/maintenance.js");
+  const recovered = await recoverInterruptedRuns("startup");
+  if (recovered > 0) {
+    logger.warn({ recovered }, "Runs interrompus marqués FAILED au démarrage");
+  }
+
   const app = createApp(config, passwordHash);
 
   const { createSyncService } = await import("./services/sync-service.js");

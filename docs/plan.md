@@ -68,25 +68,28 @@ Livré : `compatibility.md`, `architecture.md`, `plan.md`, `decisions.md`. Valid
 
 **Exit lot 5 :** voir `docs/lot5.md`.
 
-## Lot 6 — Console complète
+## Lot 6 — Console complète ✅ (2026-11-13)
 
-| Tâche | Critère de sortie |
-|---|---|
-| Dashboard / Documents / Historique / Config | Responsive FR |
-| API `/api/v1/*` | 202 async, 409 conflit, auth |
-| Polling progression | Navigateur fermé ≠ stop job |
+| Tâche | Critère de sortie | Statut |
+|---|---|---|
+| Dashboard / Documents / Historique / Config | Responsive FR | OK |
+| API `/api/v1/*` | 202 async, 409 conflit, auth | OK |
+| Polling progression | Navigateur fermé ≠ stop job | OK |
+| Déconnexion | UI + audit | OK |
 
-**Exit :** parcours admin complets + tests UI critiques.
+**Exit lot 6 :** voir `docs/lot6.md`.
 
-## Lot 7 — Durcissement & déploiement
+## Lot 7 — Durcissement & déploiement ✅ docs/code (2026-11-13)
 
-| Tâche | Critère de sortie |
-|---|---|
-| Tests unitaires / intégration mock / e2e | Scénarios CDC §15 |
-| Ops : backup SQLite, secrets, Traefik, rollback | `docs/operations.md` |
-| Recette workspace test | Checklist CDC signée |
-| Migration contrôlée imports manuels | Procédure approuvée, pas auto-destructive |
-| Prod | **Uniquement après accord explicite** |
+| Tâche | Critère de sortie | Statut |
+|---|---|---|
+| Tests unitaires / intégration mock / e2e | Scénarios CDC §15 | Partiel (unitaires + mocks ; e2e manuel) |
+| Ops : backup SQLite, secrets, Traefik, rollback | `docs/operations.md` | OK |
+| Recette workspace test | Checklist CDC signée | Checklist prête — signature humaine |
+| Migration contrôlée imports manuels | Procédure approuvée | Documentée, non auto |
+| Prod | **Uniquement après accord explicite** | Bloqué |
+
+**Exit lot 7 (code) :** voir `docs/lot7.md` + `docs/operations.md`. Prod = étape séparée.
 
 ## Dépendances bloquantes actuelles (post lot 0)
 

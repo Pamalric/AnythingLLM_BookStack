@@ -69,3 +69,5 @@ curl http://127.0.0.1:8080/health
 | 3 | Inventaire BookStack + hash | `docs/lot3.md` |
 | 4 | Upload / embeddings / sync document | `docs/lot4.md` |
 | 5 | Scheduler, verrous, dry-run, retraits | `docs/lot5.md` |
+| 6 | Console admin complète | `docs/lot6.md` |
+| 7 | Ops / backup / checklist recette | `docs/lot7.md`, `docs/operations.md` |

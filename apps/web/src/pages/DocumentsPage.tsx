@@ -70,6 +70,7 @@ const STATES = [
 export function DocumentsPage() {
   const toast = useToast();
   const [tab, setTab] = useState<"docs" | "removals">("docs");
+  const [qDraft, setQDraft] = useState("");
   const [q, setQ] = useState("");
   const [state, setState] = useState("");
   const [page, setPage] = useState(1);
@@ -104,6 +105,20 @@ export function DocumentsPage() {
     else void loadRemovals();
   }, [tab, loadDocs, loadRemovals]);
 
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelected(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
+
+  function applySearch() {
+    setPage(1);
+    setQ(qDraft.trim());
+  }
+
   async function openDetail(id: string) {
     const res = await apiFetch<DocDetail>(`/api/v1/documents/${id}`);
     if (!res.ok) {
@@ -113,16 +128,27 @@ export function DocumentsPage() {
     setSelected(res.data);
   }
 
-  async function resync(id: string) {
-    if (!window.confirm("Resynchroniser ce document ?")) return;
+  async function resync(id: string, hasTarget: boolean) {
+    const msg = hasTarget
+      ? "Resynchroniser ce document ? Une nouvelle version sera indexée avant retrait de l’ancienne."
+      : "Resynchroniser ce document (première indexation) ?";
+    if (!window.confirm(msg)) return;
     setBusy(true);
     const res = await apiFetch(`/api/v1/documents/${id}/sync`, { method: "POST", body: "{}" });
     setBusy(false);
     if (!res.ok) toast.error(res.message);
-    else toast.success("Resynchronisation demandée");
+    else {
+      toast.success("Resynchronisation demandée — suivi dans Historique");
+      await loadDocs();
+    }
   }
 
   async function decideRemoval(id: string, decision: "approve" | "reject") {
+    const confirmMsg =
+      decision === "approve"
+        ? "Approuver le retrait du document AnythingLLM (CONNECTOR_OWNED uniquement) ?"
+        : "Rejeter cette proposition de retrait ?";
+    if (!window.confirm(confirmMsg)) return;
     setBusy(true);
     const res = await apiFetch(`/api/v1/removals/${id}/${decision}`, {
       method: "POST",
@@ -172,10 +198,10 @@ export function DocumentsPage() {
             <input
               className="min-w-[12rem] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
               placeholder="Rechercher titre, livre…"
-              value={q}
-              onChange={(e) => {
-                setPage(1);
-                setQ(e.target.value);
+              value={qDraft}
+              onChange={(e) => setQDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applySearch();
               }}
             />
             <select
@@ -192,6 +218,13 @@ export function DocumentsPage() {
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              onClick={applySearch}
+              className="rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white"
+            >
+              Rechercher
+            </button>
             <button
               type="button"
               onClick={() => void loadDocs()}
@@ -239,7 +272,7 @@ export function DocumentsPage() {
                             type="button"
                             disabled={busy}
                             className="text-slate-700 underline disabled:opacity-50"
-                            onClick={() => void resync(d.id)}
+                            onClick={() => void resync(d.id, Boolean(d.targetPath))}
                           >
                             Resync
                           </button>
@@ -250,7 +283,8 @@ export function DocumentsPage() {
                 ) : (
                   <tr>
                     <td colSpan={7} className="px-3 py-8 text-center text-slate-600">
-                      Aucun document inventorié pour le moment (collecte BookStack : lot 3).
+                      Aucun document inventorié. Lancez d’abord une simulation depuis le tableau de
+                      bord.
                     </td>
                   </tr>
                 )}
@@ -367,7 +401,12 @@ export function DocumentsPage() {
               <p>
                 URL :{" "}
                 {selected.sourceUrl ? (
-                  <a className="text-accent underline" href={selected.sourceUrl} target="_blank" rel="noreferrer">
+                  <a
+                    className="text-accent underline"
+                    href={selected.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     ouvrir
                   </a>
                 ) : (
@@ -375,8 +414,22 @@ export function DocumentsPage() {
                 )}
               </p>
               <p>Hash : {selected.contentHash ?? "—"}</p>
-              <p>Chemin AnythingLLM : {selected.target?.documentPath ?? selected.targetPath ?? "—"}</p>
+              <p>
+                Chemin AnythingLLM :{" "}
+                {selected.target?.documentPath ?? selected.targetPath ?? "—"}
+              </p>
+              <p>Ownership : {selected.target?.ownership ?? "—"}</p>
               <p>Dernière erreur : {selected.lastError ?? "—"}</p>
+            </div>
+            <div className="mt-4">
+              <button
+                type="button"
+                disabled={busy}
+                className="rounded-md bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                onClick={() => void resync(selected.id, Boolean(selected.target))}
+              >
+                Resynchroniser
+              </button>
             </div>
             {selected.recentEvents?.length ? (
               <div className="mt-4">

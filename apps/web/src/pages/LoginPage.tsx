@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../components/Toaster";
 import { readCsrfCookie } from "../lib/api";
+import { APP_VERSION } from "../lib/labels";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -72,7 +73,7 @@ export function LoginPage() {
           </button>
         </form>
       </div>
-      <p className="mt-4 text-center text-xs text-slate-400">v.26.11.13</p>
+      <p className="mt-4 text-center text-xs text-slate-400">{APP_VERSION}</p>
     </main>
   );
 }

@@ -4,6 +4,7 @@ import { StatusBadge } from "../components/StatusBadge";
 import { useToast } from "../components/Toaster";
 import { apiFetch } from "../lib/api";
 import { formatDate, formatDuration } from "../lib/format";
+import { formatCounters } from "../lib/labels";
 
 type Dashboard = {
   connections: {
@@ -91,9 +92,13 @@ export function DashboardPage() {
 
   useEffect(() => {
     void load();
-    const t = window.setInterval(() => void load(), 5000);
-    return () => window.clearInterval(t);
   }, [load]);
+
+  useEffect(() => {
+    const ms = data?.currentRun ? 2000 : 5000;
+    const t = window.setInterval(() => void load(), ms);
+    return () => window.clearInterval(t);
+  }, [load, data?.currentRun]);
 
   async function startSync(dryRun: boolean) {
     setBusy(true);
@@ -192,6 +197,9 @@ export function DashboardPage() {
           <p className="mt-2 text-sm text-slate-700">
             Phase : {data.currentRun.phase ?? "—"} · Démarré {formatDate(data.currentRun.startedAt)}
           </p>
+          <p className="mt-1 text-xs text-slate-600">
+            Fermer le navigateur n’interrompt pas le job (suivi côté serveur).
+          </p>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
             <div className="h-full bg-accent transition-all" style={{ width: `${progress}%` }} />
           </div>
@@ -212,16 +220,14 @@ export function DashboardPage() {
                   {data.lastRun.trigger} / {data.lastRun.type}
                 </span>
               </div>
+              {data.lastRun.status === "PARTIAL" ? (
+                <p className="text-amber-800">
+                  Terminé partiellement — certaines pages en erreur ; ce n’est pas un succès complet.
+                </p>
+              ) : null}
               <p>Début : {formatDate(data.lastRun.startedAt)}</p>
               <p>Durée : {formatDuration(data.lastRun.durationMs)}</p>
-              <p>
-                Compteurs :{" "}
-                {Object.keys(data.lastRun.counters).length
-                  ? Object.entries(data.lastRun.counters)
-                      .map(([k, v]) => `${k}=${v}`)
-                      .join(", ")
-                  : "—"}
-              </p>
+              <p>Compteurs : {formatCounters(data.lastRun.counters)}</p>
               {data.lastRun.errorSummary ? (
                 <p className="text-red-700">{data.lastRun.errorSummary}</p>
               ) : null}

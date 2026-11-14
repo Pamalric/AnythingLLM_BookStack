@@ -1,23 +1,31 @@
 import type { AppConfig } from "../config.js";
 import { prisma } from "../db.js";
 import { logger } from "../logger.js";
+import { purgeOldSyncHistory } from "./maintenance.js";
 import type { SyncService } from "./sync-service.js";
 
 /**
- * Planificateur simple (lot 5) — intervalle configurable, fuseau Europe/Paris
- * utilisé pour l'affichage ; le tick est en UTC ms.
+ * Planificateur (lots 5–7) — sync planifiée + purge historique quotidienne.
  */
 export function startScheduler(_config: AppConfig, sync: SyncService): () => void {
   let timer: ReturnType<typeof setInterval> | null = null;
   let lastTickCheck = 0;
+  let lastPurgeDay = "";
 
   const tick = async () => {
     const now = Date.now();
-    // Éviter les ticks trop rapprochés si le timer est agressif
     if (now - lastTickCheck < 20_000) return;
     lastTickCheck = now;
 
     try {
+      const dayKey = new Date().toISOString().slice(0, 10);
+      if (dayKey !== lastPurgeDay) {
+        lastPurgeDay = dayKey;
+        await purgeOldSyncHistory().catch((err) =>
+          logger.warn({ err }, "Purge historique échouée"),
+        );
+      }
+
       const settings = await prisma.settings.findUnique({ where: { id: 1 } });
       if (!settings?.scheduleEnabled) return;
 

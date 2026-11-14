@@ -4,6 +4,7 @@ import { StatusBadge } from "../components/StatusBadge";
 import { useToast } from "../components/Toaster";
 import { apiFetch } from "../lib/api";
 import { formatDate, formatDuration } from "../lib/format";
+import { formatCounters } from "../lib/labels";
 
 type RunRow = {
   id: string;
@@ -64,24 +65,47 @@ export function HistoryPage() {
     void load();
   }, [load]);
 
+  const hasRunning = Boolean(list?.items.some((r) => r.status === "RUNNING"));
+  useEffect(() => {
+    if (!hasRunning && detail?.status !== "RUNNING") return;
+    const t = window.setInterval(() => {
+      void load();
+      if (detail?.status === "RUNNING") void openDetail(detail.id, false);
+    }, 2500);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasRunning, detail?.id, detail?.status, load]);
+
   useEffect(() => {
     const runId = params.get("run");
-    if (runId) void openDetail(runId);
+    if (runId) void openDetail(runId, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function openDetail(id: string) {
+  useEffect(() => {
+    if (!detail) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeDetail();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail]);
+
+  async function openDetail(id: string, updateUrl = true) {
     const res = await apiFetch<RunDetail>(`/api/v1/sync-runs/${id}`);
     if (!res.ok) {
       toast.error(res.message);
       return;
     }
     setDetail(res.data);
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set("run", id);
-      return next;
-    });
+    if (updateUrl) {
+      setParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("run", id);
+        return next;
+      });
+    }
   }
 
   function closeDetail() {
@@ -101,7 +125,9 @@ export function HistoryPage() {
     <div className="space-y-6">
       <section className="rounded-lg border border-slate-200 bg-white/80 p-6 shadow-sm">
         <h1 className="text-2xl font-semibold text-ink">Historique</h1>
-        <p className="mt-1 text-slate-600">Exécutions de synchronisation et événements associés.</p>
+        <p className="mt-1 text-slate-600">
+          Exécutions de synchronisation et événements associés (rétention 90 jours).
+        </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <select
             className="rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -209,13 +235,21 @@ export function HistoryPage() {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-ink">Exécution {detail.id.slice(0, 8)}…</h2>
+                <h2 className="text-lg font-semibold text-ink">Exécution</h2>
+                <p className="mt-1 font-mono text-xs text-slate-500" title="Identifiant de corrélation">
+                  {detail.id}
+                </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <StatusBadge value={detail.status} />
                   <span className="text-sm text-slate-600">
                     {detail.trigger} / {detail.type}
                   </span>
                 </div>
+                {detail.status === "PARTIAL" ? (
+                  <p className="mt-2 text-sm text-amber-800">
+                    Succès partiel — des erreurs documentaires subsistent.
+                  </p>
+                ) : null}
               </div>
               <button type="button" className="text-sm text-slate-600" onClick={closeDetail}>
                 Fermer
@@ -232,12 +266,7 @@ export function HistoryPage() {
               <p>Phase : {detail.phase ?? "—"}</p>
             </div>
             <p className="mt-3 text-sm text-slate-700">
-              Compteurs :{" "}
-              {Object.keys(detail.counters).length
-                ? Object.entries(detail.counters)
-                    .map(([k, v]) => `${k}=${v}`)
-                    .join(", ")
-                : "—"}
+              Compteurs : {formatCounters(detail.counters)}
             </p>
             {detail.errorSummary ? (
               <p className="mt-2 text-sm text-red-700">{detail.errorSummary}</p>
