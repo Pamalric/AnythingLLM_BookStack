@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -b tsconfig.json",
+    "build": "tsc -b tsconfig.json --noCheck",
     "start": "node dist/index.js",
     "typecheck": "tsc -b tsconfig.json --pretty false"
   },
