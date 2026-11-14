@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configurateur embed Jarvis</title>
+    <style>
+      :root {
+        --ink: #152028;
+        --muted: #5a6772;
+        --line: #d7ddd8;
+        --bg: #eef2ef;
+        --panel: #ffffff;
+        --accent: #0d6e5c;
+        --accent-soft: #d8efe8;
+        --warn: #8a5a00;
+        --mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+        --sans: "Segoe UI", system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--sans);
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 8% 0%, #d9ebe4 0%, transparent 35%),
+          radial-gradient(circle at 100% 10%, #efe6d6 0%, transparent 30%),
+          var(--bg);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 440px) 1fr;
+        min-height: 100vh;
+      }
+
+      aside {
+        border-right: 1px solid var(--line);
+        background: color-mix(in srgb, var(--panel) 92%, transparent);
+        backdrop-filter: blur(8px);
+        padding: 1.25rem 1.1rem 2rem;
+        overflow: auto;
+        max-height: 100vh;
+      }
+
+      .preview {
+        position: relative;
+        padding: 1.5rem 1.5rem 5rem;
+        overflow: auto;
+      }
+
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.35rem;
+        letter-spacing: -0.02em;
+      }
+
+      .lead {
+        margin: 0 0 1.1rem;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      details {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        margin-bottom: 0.7rem;
+        overflow: hidden;
+      }
+
+      summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 0.75rem 0.9rem;
+        font-weight: 600;
+        font-size: 0.92rem;
+        user-select: none;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      summary::after {
+        content: "+";
+        float: right;
+        color: var(--muted);
+        font-weight: 400;
+      }
+
+      details[open] summary::after {
+        content: "−";
+      }
+
+      .fields {
+        display: grid;
+        gap: 0.65rem;
+        padding: 0 0.9rem 0.9rem;
+      }
+
+      label {
+        display: grid;
+        gap: 0.28rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+
+      label span.req::after {
+        content: " *";
+        color: #b42318;
+      }
+
+      input[type="text"],
+      input[type="url"],
+      input[type="color"],
+      input[type="number"],
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0.5rem 0.6rem;
+        font: inherit;
+        color: var(--ink);
+        background: #fff;
+      }
+
+      input[type="color"] {
+        padding: 0.15rem;
+        height: 2.2rem;
+      }
+
+      textarea {
+        min-height: 4.2rem;
+        resize: vertical;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+      }
+
+      .row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.55rem;
+      }
+
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.86rem;
+        color: var(--ink);
+        padding: 0.15rem 0;
+      }
+
+      .check input {
+        width: 1rem;
+        height: 1rem;
+      }
+
+      .actions {
+        display: grid;
+        gap: 0.5rem;
+        margin-top: 0.85rem;
+        position: sticky;
+        bottom: 0;
+        padding-top: 0.75rem;
+        background: linear-gradient(to top, var(--bg), color-mix(in srgb, var(--bg) 85%, transparent));
+      }
+
+      button {
+        border: 0;
+        border-radius: 9px;
+        padding: 0.7rem 0.85rem;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .btn-secondary {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .hint {
+        margin: 0.35rem 0 0;
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+
+      .stage {
+        min-height: calc(100vh - 3rem);
+        border: 1px dashed #b9c4bc;
+        border-radius: 16px;
+        background:
+          linear-gradient(180deg, #fff 0%, #f7faf8 100%);
+        padding: 2rem;
+        display: grid;
+        align-content: start;
+        gap: 1rem;
+      }
+
+      .stage h2 {
+        margin: 0;
+        font-size: 1.15rem;
+      }
+
+      .stage p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 36rem;
+        line-height: 1.5;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        width: fit-content;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      .code-wrap {
+        margin-top: 0.5rem;
+      }
+
+      .code-wrap h3 {
+        margin: 0 0 0.45rem;
+        font-size: 0.9rem;
+      }
+
+      pre {
+        margin: 0;
+        padding: 0.9rem;
+        border-radius: 10px;
+        background: #122018;
+        color: #d7efe4;
+        overflow: auto;
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 1.25rem;
+        transform: translateX(-50%) translateY(120%);
+        background: var(--ink);
+        color: #fff;
+        padding: 0.65rem 0.95rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        transition: transform 0.25s ease;
+        z-index: 9999;
+      }
+
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+      }
+
+      @media (max-width: 960px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        aside {
+          max-height: none;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .preview {
+          min-height: 70vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside>
+        <h1>Configurateur embed</h1>
+        <p class="lead">
+          Réglez l’apparence et le comportement du chat Jarvis, appliquez pour
+          prévisualiser, puis copiez le snippet HTML.
+        </p>
+
+        <details open>
+          <summary>Connexion</summary>
+          <div class="fields">
+            <label>
+              <span class="req">Embed ID</span>
+              <input id="embedId" type="text" value="b75d205b-c470-4e73-8c65-1ce4d9ebf144" />
+            </label>
+            <label>
+              <span class="req">Base API URL</span>
+              <input id="baseApiUrl" type="url" value="https://jarvis.xperteam.net/api/embed" />
+            </label>
+            <label>
+              <span class="req">Script src</span>
+              <input
+                id="scriptSrc"
+                type="url"
+                value="https://jarvis.xperteam.net/embed/anythingllm-chat-widget.min.js"
+              />
+            </label>
+          </div>
+        </details>
+
+        <details open>
+          <summary>Apparence</summary>
+          <div class="fields">
+            <div class="row-2">
+              <label>
+                Icône bulle
+                <select id="chatIcon">
+                  <option value="">(défaut)</option>
+                  <option value="plus">plus</option>
+                  <option value="chatBubble" selected>chatBubble</option>
+                  <option value="support">support</option>
+                  <option value="search2">search2</option>
+                  <option value="search">search</option>
+                  <option value="magic">magic</option>
+                </select>
+              </label>
+              <label>
+                Position
+                <select id="position">
+                  <option value="">(défaut bottom-right)</option>
+                  <option value="bottom-right" selected>bottom-right</option>
+                  <option value="bottom-left">bottom-left</option>
+                  <option value="top-right">top-right</option>
+                  <option value="top-left">top-left</option>
+                </select>
+              </label>
+            </div>
+            <div class="row-2">
+              <label>
+                Couleur bulle
+                <input id="buttonColor" type="color" value="#0d6e5c" />
+              </label>
+              <label>
+                Fond utilisateur
+                <input id="userBgColor" type="color" value="#0d6e5c" />
+              </label>
+            </div>
+            <div class="row-2">
+              <label>
+                Fond assistant
+                <input id="assistantBgColor" type="color" value="#e8eef0" />
+              </label>
+              <label>
+                Taille texte (px)
+                <input id="textSize" type="number" min="10" max="24" placeholder="ex. 14" />
+              </label>
+            </div>
+            <div class="row-2">
+              <label>
+                Largeur fenêtre
+                <input id="windowWidth" type="text" value="420px" placeholder="420px" />
+              </label>
+              <label>
+                Hauteur fenêtre
+                <input id="windowHeight" type="text" value="700px" placeholder="700px" />
+              </label>
+            </div>
+            <label>
+              Image marque (URL)
+              <input id="brandImageUrl" type="url" placeholder="https://..." />
+            </label>
+            <label>
+              Icône assistant (URL)
+              <input id="assistantIcon" type="url" placeholder="https://..." />
+            </label>
+            <label>
+              Nom assistant
+              <input id="assistantName" type="text" value="Jarvis XPERTEAM" />
+            </label>
+            <label class="check">
+              <input id="noHeader" type="checkbox" />
+              Masquer l’en-tête (`data-no-header`)
+            </label>
+          </div>
+        </details>
+
+        <details open>
+          <summary>Textes & sponsor</summary>
+          <div class="fields">
+            <label>
+              Langue
+              <input id="language" type="text" value="fr" placeholder="fr, en, ..." />
+            </label>
+            <label>
+              Message d’accueil
+              <input
+                id="greeting"
+                type="text"
+                value="Bonjour, comment puis-je vous aider ?"
+              />
+            </label>
+            <label>
+              Suggestions (séparées par des virgules)
+              <textarea id="defaultMessages" placeholder="Question 1?, Question 2?">Qu'est-ce que BookStack Sync?, Comment indexer une page?, Qui contacter pour le support?</textarea>
+            </label>
+            <label>
+              Placeholder champ message
+              <input id="sendMessageText" type="text" placeholder="Écrire un message..." />
+            </label>
+            <label>
+              Texte bouton reset
+              <input id="resetChatText" type="text" placeholder="Réinitialiser" />
+            </label>
+            <label class="check">
+              <input id="noSponsor" type="checkbox" checked />
+              Masquer « Powered by » (`data-no-sponsor`)
+            </label>
+            <label>
+              Texte sponsor
+              <input id="sponsorText" type="text" placeholder="Propulsé par XPERTEAM" />
+            </label>
+            <label>
+              Lien sponsor
+              <input id="sponsorLink" type="url" placeholder="https://..." />
+            </label>
+            <p class="hint">
+              Si « Masquer Powered by » est coché, texte/lien sponsor sont ignorés.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Comportement</summary>
+          <div class="fields">
+            <label class="check">
+              <input id="openOnLoad" type="checkbox" />
+              Ouvrir au chargement (`data-open-on-load="on"`)
+            </label>
+            <label>
+              Afficher le raisonnement
+              <select id="showThoughts">
+                <option value="">(défaut false)</option>
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label>
+              Email support
+              <input id="supportEmail" type="text" placeholder="support@xperteam.fr" />
+            </label>
+            <label>
+              Username (logs Jarvis)
+              <input id="username" type="text" placeholder="demo-preview" />
+            </label>
+          </div>
+        </details>
+
+        <details>
+          <summary>Overrides LLM (avancé)</summary>
+          <div class="fields">
+            <label>
+              Prompt système
+              <textarea id="prompt" placeholder="Optionnel"></textarea>
+            </label>
+            <label>
+              Modèle
+              <input id="model" type="text" placeholder="ex. gpt-4o" />
+            </label>
+            <label>
+              Temperature
+              <input id="temperature" type="text" placeholder="ex. 0.2" />
+            </label>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button class="btn-primary" id="btnApply" type="button">Appliquer l’aperçu</button>
+          <button class="btn-secondary" id="btnCopy" type="button">Copier le snippet HTML</button>
+          <p class="hint">
+            L’aperçu réinjecte le script (bulle en bas à droite / selon position).
+          </p>
+        </div>
+      </aside>
+
+      <section class="preview">
+        <div class="stage">
+          <div class="badge" id="statusBadge">Aperçu prêt</div>
+          <h2>Page hôte de démonstration</h2>
+          <p>
+            Simule une page web XPERTEAM. Cliquez sur la bulle AnythingLLM pour
+            tester le chat avec la configuration choisie.
+          </p>
+          <div class="code-wrap">
+            <h3>Snippet généré</h3>
+            <pre id="snippetOut"></pre>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+      const FIELD_MAP = [
+        ["embedId", "data-embed-id", true],
+        ["baseApiUrl", "data-base-api-url", true],
+        ["chatIcon", "data-chat-icon"],
+        ["buttonColor", "data-button-color", false, "color"],
+        ["userBgColor", "data-user-bg-color", false, "color"],
+        ["assistantBgColor", "data-assistant-bg-color", false, "color"],
+        ["brandImageUrl", "data-brand-image-url"],
+        ["greeting", "data-greeting"],
+        ["sponsorLink", "data-sponsor-link"],
+        ["sponsorText", "data-sponsor-text"],
+        ["position", "data-position"],
+        ["assistantName", "data-assistant-name"],
+        ["assistantIcon", "data-assistant-icon"],
+        ["windowHeight", "data-window-height"],
+        ["windowWidth", "data-window-width"],
+        ["textSize", "data-text-size"],
+        ["username", "data-username"],
+        ["defaultMessages", "data-default-messages"],
+        ["sendMessageText", "data-send-message-text"],
+        ["resetChatText", "data-reset-chat-text"],
+        ["language", "data-language"],
+        ["showThoughts", "data-show-thoughts"],
+        ["supportEmail", "data-support-email"],
+        ["prompt", "data-prompt"],
+        ["model", "data-model"],
+        ["temperature", "data-temperature"],
+      ];
+
+      const $ = (id) => document.getElementById(id);
+      const toastEl = $("toast");
+      const snippetOut = $("snippetOut");
+      const statusBadge = $("statusBadge");
+
+      let toastTimer;
+
+      function showToast(message) {
+        toastEl.textContent = message;
+        toastEl.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+      }
+
+      function val(id) {
+        return ($(id)?.value || "").trim();
+      }
+
+      function buildAttrs() {
+        const attrs = {};
+        const noSponsor = $("noSponsor").checked;
+
+        for (const [id, attr] of FIELD_MAP) {
+          let value = val(id);
+          if (!value) continue;
+
+          if (
+            noSponsor &&
+            (attr === "data-sponsor-text" || attr === "data-sponsor-link")
+          ) {
+            continue;
+          }
+
+          // color inputs always have a value; only emit if user intends style overrides
+          attrs[attr] = value;
+        }
+
+        if ($("noSponsor").checked) attrs["data-no-sponsor"] = "true";
+        if ($("noHeader").checked) attrs["data-no-header"] = "true";
+        if ($("openOnLoad").checked) attrs["data-open-on-load"] = "on";
+
+        return attrs;
+      }
+
+      function attrsToHtml(attrs, scriptSrc) {
+        const lines = Object.entries(attrs).map(
+          ([k, v]) => `  ${k}="${escapeAttr(v)}"`
+        );
+        return `<script\n${lines.join("\n")}\n  src="${escapeAttr(scriptSrc)}">\n<\/script>`;
+      }
+
+      function escapeAttr(s) {
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("<", "&lt;");
+      }
+
+      function destroyExistingWidget() {
+        document
+          .querySelectorAll("script[data-embed-id]")
+          .forEach((n) => n.remove());
+
+        // Common embed leftovers (best-effort cleanup between previews)
+        const selectors = [
+          "#anything-llm-embed-chat-button-container",
+          "#anything-llm-embed-chat-container",
+          ".anything-llm-embed",
+          "[id*='anything-llm']",
+          "[class*='anything-llm']",
+          "[id*='anythingllm']",
+          "[class*='anythingllm']",
+        ];
+        for (const sel of selectors) {
+          document.querySelectorAll(sel).forEach((n) => {
+            if (n.closest("aside") || n.id === "snippetOut") return;
+            n.remove();
+          });
+        }
+      }
+
+      function applyPreview() {
+        const embedId = val("embedId");
+        const baseApiUrl = val("baseApiUrl");
+        const scriptSrc = val("scriptSrc");
+
+        if (!embedId || !baseApiUrl || !scriptSrc) {
+          showToast("Embed ID, API URL et script src sont requis");
+          return;
+        }
+
+        const attrs = buildAttrs();
+        snippetOut.textContent = attrsToHtml(attrs, scriptSrc);
+        statusBadge.textContent = "Rechargement du widget…";
+
+        destroyExistingWidget();
+
+        const script = document.createElement("script");
+        for (const [k, v] of Object.entries(attrs)) {
+          script.setAttribute(k, v);
+        }
+        script.src = scriptSrc;
+        script.async = true;
+        script.onload = () => {
+          statusBadge.textContent = "Aperçu actif";
+          showToast("Aperçu mis à jour");
+        };
+        script.onerror = () => {
+          statusBadge.textContent = "Échec chargement script";
+          showToast("Impossible de charger le script embed");
+        };
+        document.body.appendChild(script);
+      }
+
+      async function copySnippet() {
+        const text = snippetOut.textContent || "";
+        if (!text) {
+          showToast("Rien à copier — appliquez d’abord");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast("Snippet copié");
+        } catch {
+          showToast("Copie impossible — sélectionnez le snippet");
+        }
+      }
+
+      $("btnApply").addEventListener("click", applyPreview);
+      $("btnCopy").addEventListener("click", copySnippet);
+      $("noSponsor").addEventListener("change", () => {
+        const disabled = $("noSponsor").checked;
+        $("sponsorText").disabled = disabled;
+        $("sponsorLink").disabled = disabled;
+      });
+
+      // Initial state
+      $("sponsorText").disabled = true;
+      $("sponsorLink").disabled = true;
+      snippetOut.textContent = attrsToHtml(buildAttrs(), val("scriptSrc"));
+      applyPreview();
+    </script>
+  </body>
+</html>
