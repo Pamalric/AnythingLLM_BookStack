@@ -15,11 +15,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {
-    "@bookstack-sync/anythingllm-adapter": "workspace:*",
-    "@bookstack-sync/bookstack-adapter": "workspace:*",
-    "@bookstack-sync/shared": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "typescript": "^5.7.2"
   }

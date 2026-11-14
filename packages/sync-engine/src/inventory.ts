@@ -1,4 +1,13 @@
-import type { DocumentState } from "@bookstack-sync/shared";
+/** Aligné sur packages/shared DOCUMENT_STATES (évite résolution TS fragile en Docker). */
+export type DocumentState =
+  | "NEW"
+  | "SYNCED"
+  | "OUTDATED"
+  | "PROCESSING"
+  | "ERROR"
+  | "PENDING_REMOVAL"
+  | "ACCESS_REVIEW"
+  | "REMOVED";
 
 export type RemotePageRef = {
   bookstackId: number;
