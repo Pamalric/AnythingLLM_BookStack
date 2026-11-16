@@ -121,6 +121,9 @@ export class AnythingLlmClient {
   /**
    * POST /v1/document/upload/{folderName}
    * multipart: file + optional metadata fields
+   *
+   * `chunkSource` au format `link://https://…` rend la citation cliquable
+   * dans le chat Jarvis (parseChunkSource côté AnythingLLM).
    */
   async uploadMarkdown(params: {
     folderName: string;
@@ -128,20 +131,22 @@ export class AnythingLlmClient {
     content: string;
     title: string;
     docSource?: string;
+    chunkSource?: string;
     description?: string;
   }): Promise<UploadedDocument> {
     const form = new FormData();
     const blob = new Blob([params.content], { type: "text/markdown" });
     form.append("file", blob, params.filename);
-    form.append(
-      "metadata",
-      JSON.stringify({
-        title: params.title,
-        docAuthor: "BookStack Sync",
-        description: params.description ?? "Synchronisé depuis BookStack",
-        docSource: params.docSource ?? "bookstack-sync",
-      }),
-    );
+    const metadata: Record<string, string> = {
+      title: params.title,
+      docAuthor: "BookStack Sync",
+      description: params.description ?? "Synchronisé depuis BookStack",
+      docSource: params.docSource ?? "bookstack-sync",
+    };
+    if (params.chunkSource) {
+      metadata.chunkSource = params.chunkSource;
+    }
+    form.append("metadata", JSON.stringify(metadata));
 
     const body = await this.requestForm<{
       success?: boolean;

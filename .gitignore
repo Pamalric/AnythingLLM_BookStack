@@ -24,3 +24,6 @@ packages/*/dist
 prisma/*.db
 .pnpm-store
 *.tsbuildinfo
+
+# Notes locales (second cerveau) — jamais poussées
+/notes/

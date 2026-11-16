@@ -11,7 +11,10 @@ export {
 export {
   buildMetadataCanonical,
   buildSourcePageUrl,
+  buildChunkSource,
+  buildUploadMarkdown,
   buildUploadFilename,
+  CITATION_SCHEME,
   CONNECTOR_FOLDER,
   type PageMetadataInput,
 } from "./metadata.js";

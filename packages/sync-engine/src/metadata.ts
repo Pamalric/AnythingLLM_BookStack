@@ -6,6 +6,13 @@ export type PageMetadataInput = {
   chapterName: string | null;
 };
 
+/**
+ * Schéma de citation AnythingLLM.
+ * `link-v1` = métadonnée `chunkSource: link://<url>` pour liens cliquables dans le chat.
+ * Incrémenter si le format d'upload citation change (invalide les hash → réindexation).
+ */
+export const CITATION_SCHEME = "link-v1";
+
 /** Métadonnées canoniques stables pour le hash (ordre de clés fixe). */
 export function buildMetadataCanonical(meta: PageMetadataInput): string {
   return [
@@ -14,6 +21,7 @@ export function buildMetadataCanonical(meta: PageMetadataInput): string {
     `sourceUrl=${meta.sourceUrl}`,
     `book=${meta.bookName ?? ""}`,
     `chapter=${meta.chapterName ?? ""}`,
+    `citation=${CITATION_SCHEME}`,
   ].join("\n");
 }
 
@@ -28,6 +36,23 @@ export function buildSourcePageUrl(params: {
     return `${base}/books/${params.bookSlug}/page/${params.pageSlug}`;
   }
   return `${base}/link/${params.pageId}`;
+}
+
+/**
+ * Préfixe AnythingLLM pour citations cliquables (`parseChunkSource` côté Jarvis).
+ * Sans `link://`, l'UI traite la source comme un fichier local non cliquable.
+ */
+export function buildChunkSource(sourceUrl: string): string {
+  const trimmed = sourceUrl.trim();
+  if (trimmed.startsWith("link://")) return trimmed;
+  return `link://${trimmed}`;
+}
+
+/** En-tête visible dans le Markdown indexé pour que le modèle puisse citer l'URL. */
+export function buildUploadMarkdown(markdown: string, sourceUrl: string): string {
+  const url = sourceUrl.trim();
+  if (!url) return markdown;
+  return [`Source BookStack: ${url}`, "", markdown.replace(/^\uFEFF/, "")].join("\n");
 }
 
 /** Nom de fichier sûr pour upload AnythingLLM. */

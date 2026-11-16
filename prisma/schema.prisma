@@ -18,6 +18,8 @@ model Settings {
   scheduleIntervalMin   Int      @default(60)
   removalPolicy         String   @default("manual_approval")
   timezone              String   @default("Europe/Paris")
+  /// Schéma de citation publié dans AnythingLLM (ex. link-v1). Vide = jamais publié.
+  citationScheme        String   @default("")
   lastBookstackTestAt      DateTime?
   lastBookstackTestOk      Boolean?
   lastBookstackTestMessage String?

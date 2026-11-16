@@ -10,7 +10,10 @@ import {
   CONNECTOR_FOLDER,
   buildMetadataCanonical,
   buildSourcePageUrl,
+  buildChunkSource,
+  buildUploadMarkdown,
   buildUploadFilename,
+  CITATION_SCHEME,
   canAcquireLock,
   contentHash,
   diffInventory,
@@ -182,6 +185,22 @@ async function runInventorySync(
 ): Promise<void> {
   const settings = await ensureSettings();
   await setPhase(ctx.runId, "inventory", 0, 0);
+
+  const citationUpgradeNeeded = settings.citationScheme !== CITATION_SCHEME;
+  if (citationUpgradeNeeded && !ctx.dryRun) {
+    const marked = await prisma.sourcePage.updateMany({
+      where: {
+        state: { in: ["SYNCED", "ERROR"] },
+        target: { isNot: null },
+      },
+      data: { state: "OUTDATED" },
+    });
+    if (marked.count > 0) {
+      await addEvent(ctx.runId, null, "CITATION_UPGRADE", "SUCCESS", {
+        message: `Réindexation citations (${CITATION_SCHEME}) : ${marked.count} document(s) marqué(s) OUTDATED`,
+      });
+    }
+  }
 
   let inventoryComplete = false;
   let remotePages: RemotePageRef[] = [];
@@ -381,6 +400,16 @@ async function runInventorySync(
   }
 
   await persistCounters(ctx);
+
+  if (citationUpgradeNeeded && !ctx.dryRun && ctx.counters.errors === 0) {
+    await prisma.settings.update({
+      where: { id: 1 },
+      data: { citationScheme: CITATION_SCHEME },
+    });
+    await addEvent(ctx.runId, null, "CITATION_UPGRADE", "SUCCESS", {
+      message: `Schéma de citation publié : ${CITATION_SCHEME}`,
+    });
+  }
 }
 
 async function runDocumentSync(
@@ -440,14 +469,16 @@ async function processPage(
     throw err;
   }
 
+  const sourceUrl = page.sourceUrl ?? "";
+  const uploadBody = buildUploadMarkdown(markdown, sourceUrl);
   const meta = buildMetadataCanonical({
     title: page.title,
     sourceKey: page.sourceKey,
-    sourceUrl: page.sourceUrl ?? "",
+    sourceUrl,
     bookName: page.bookName,
     chapterName: page.chapterName,
   });
-  const hash = contentHash(markdown, meta);
+  const hash = contentHash(uploadBody, meta);
 
   if (page.contentHash === hash && page.target && page.state !== "ERROR") {
     await prisma.sourcePage.update({
@@ -497,9 +528,10 @@ async function processPage(
   const uploaded = await clients.anythingllm.uploadMarkdown({
     folderName: CONNECTOR_FOLDER,
     filename,
-    content: markdown,
+    content: uploadBody,
     title: page.title,
-    docSource: page.sourceUrl ?? page.sourceKey,
+    docSource: sourceUrl || page.sourceKey,
+    ...(sourceUrl ? { chunkSource: buildChunkSource(sourceUrl) } : {}),
     description: `BookStack ${page.sourceKey}`,
   });
 
